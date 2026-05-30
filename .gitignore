@@ -1,0 +1,9 @@
+backend/build/
+frontend/node_modules/
+frontend/build/
+*.log
+*.tar.gz
+*.tmp
+.env
+.DS_Store
+Thumbs.db
