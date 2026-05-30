@@ -7,83 +7,67 @@
 ## Как запустить (WSL / Ubuntu 22.04+)
 
 ### Шаг 1. Клонировать репозиторий
+```bash
 git clone https://github.com/Programm344/freelance-marketplace.git
 cd freelance-marketplace
-
-text
-
-### Шаг 2. Установить PostgreSQL (один раз)
+Шаг 2. Установить PostgreSQL (один раз)
+bash
 sudo apt update
 sudo apt install -y postgresql postgresql-client
 sudo service postgresql start
-
-text
-
-### Шаг 3. Создать базу данных (один раз)
+Шаг 3. Создать базу данных (один раз)
+bash
 sudo -u postgres psql -c "CREATE USER freelancer WITH PASSWORD 'freelancer_pass';"
 sudo -u postgres psql -c "CREATE DATABASE freelance_marketplace OWNER freelancer;"
 sudo -u postgres psql -d freelance_marketplace -c "GRANT ALL ON SCHEMA public TO freelancer;"
 PGPASSWORD=freelancer_pass psql -h 127.0.0.1 -U freelancer -d freelance_marketplace -f database/migrations/001_initial_schema.sql
 PGPASSWORD=freelancer_pass psql -h 127.0.0.1 -U freelancer -d freelance_marketplace -f database/migrations/002_seed_data.sql
-
-text
-
-### Шаг 4. Запустить бэкенд (терминал 1)
+Шаг 4. Запустить бэкенд (терминал 1)
+bash
 cd backend
 chmod +x build/freelance_backend
 ./build/freelance_backend
-
-text
 Сервер: http://localhost:8080
 
-### Шаг 5. Запустить фронтенд (терминал 2)
+Шаг 5. Запустить фронтенд (терминал 2)
+bash
 cd frontend
 npm install
 npm start
-
-text
 Открыть: http://localhost:3000
 
-### Шаг 6. Войти в систему
+Шаг 6. Войти в систему
+Роль	Логин	Пароль
+Админ	admin@freelance.ru	123456
+Модератор	moder@freelance.ru	123456
+Фрилансер	ivan@freelance.ru	123456
+Заказчик	company@freelance.ru	123456
+API
+Метод	Путь	Описание
+POST	/api/auth/register	Регистрация
+POST	/api/auth/login	Вход (JWT)
+GET	/api/orders	Список заказов
+POST	/api/orders	Создать заказ
+GET	/api/orders/search	Поиск заказов
+POST	/api/responses	Откликнуться
+POST	/api/responses/{id}/accept	Принять отклик
+GET	/api/moderation/orders	Модерация
+POST	/api/crawler/start	Запуск краулера
+GET	/api/admin/stats	Статистика
+GET	/api/admin/export/csv	CSV экспорт
+Функционал
+4 роли: фрилансер, заказчик, модератор, админ
 
-| Роль | Логин | Пароль |
-|------|-------|--------|
-| Админ | admin@freelance.ru | 123456 |
-| Модератор | moder@freelance.ru | 123456 |
-| Фрилансер | ivan@freelance.ru | 123456 |
-| Заказчик | company@freelance.ru | 123456 |
+CRUD заказов с 9 статусами
 
----
+Отклики, чат, отзывы, рейтинги
 
-## Структура проекта
-backend/controllers/ # 15 контроллеров API
-backend/crawler/ # Веб-краулер
-frontend/src/pages/ # 15 страниц
-database/migrations/ # SQL миграции
+Модерация заказов и заявок на роль
 
-text
+Веб-краулер (Freelance.ru, Habr Freelance)
 
-## API
-| Метод | Путь | Описание |
-|-------|------|----------|
-| POST | /api/auth/register | Регистрация |
-| POST | /api/auth/login | Вход (JWT) |
-| GET | /api/orders | Список заказов |
-| POST | /api/orders | Создать заказ |
-| GET | /api/orders/search | Поиск заказов |
-| POST | /api/responses | Откликнуться |
-| POST | /api/responses/{id}/accept | Принять отклик |
-| GET | /api/moderation/orders | Модерация |
-| POST | /api/crawler/start | Запуск краулера |
-| GET | /api/admin/stats | Статистика |
-| GET | /api/admin/export/csv | CSV экспорт |
+Статистика и CSV-экспорт
 
-## Функционал
-- 4 роли: фрилансер, заказчик, модератор, админ
-- CRUD заказов с 9 статусами
-- Отклики, чат, отзывы, рейтинги
-- Модерация заказов и заявок на роль
-- Веб-краулер (Freelance.ru, Habr Freelance)
-- Статистика и CSV-экспорт
-- JWT-авторизация
-- Защита от SQL-инъекций
+JWT-авторизация
+
+Защита от SQL-инъекций
