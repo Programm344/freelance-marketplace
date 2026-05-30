@@ -18,10 +18,12 @@ sudo -u postgres psql -c "CREATE USER freelancer WITH PASSWORD 'freelancer_pass'
 
 ### Шаг 4. Запустить бэкенд (терминал 1)
 cd backend && chmod +x build/freelance_backend && ./build/freelance_backend
+
 Сервер: http://localhost:8080
 
 ### Шаг 5. Запустить фронтенд (терминал 2)
 cd frontend && npm install && npm start
+
 Открыть: http://localhost:3000
 
 ### Шаг 6. Войти в систему
