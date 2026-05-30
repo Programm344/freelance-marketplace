@@ -10,10 +10,14 @@
 git clone https://github.com/Programm344/freelance-marketplace.git
 cd freelance-marketplace
 
+text
+
 ### Шаг 2. Установить PostgreSQL (один раз)
 sudo apt update
 sudo apt install -y postgresql postgresql-client
 sudo service postgresql start
+
+text
 
 ### Шаг 3. Создать базу данных (один раз)
 sudo -u postgres psql -c "CREATE USER freelancer WITH PASSWORD 'freelancer_pass';"
@@ -22,48 +26,57 @@ sudo -u postgres psql -d freelance_marketplace -c "GRANT ALL ON SCHEMA public TO
 PGPASSWORD=freelancer_pass psql -h 127.0.0.1 -U freelancer -d freelance_marketplace -f database/migrations/001_initial_schema.sql
 PGPASSWORD=freelancer_pass psql -h 127.0.0.1 -U freelancer -d freelance_marketplace -f database/migrations/002_seed_data.sql
 
+text
+
 ### Шаг 4. Запустить бэкенд (терминал 1)
 cd backend
 chmod +x build/freelance_backend
 ./build/freelance_backend
+
+text
 Сервер: http://localhost:8080
 
 ### Шаг 5. Запустить фронтенд (терминал 2)
 cd frontend
 npm install
 npm start
+
+text
 Открыть: http://localhost:3000
 
 ### Шаг 6. Войти в систему
-Админ: admin@freelance.ru / 123456
-Модератор: moder@freelance.ru / 123456
-Фрилансер: ivan@freelance.ru / 123456
-Заказчик: company@freelance.ru / 123456
+
+| Роль | Логин | Пароль |
+|------|-------|--------|
+| Админ | admin@freelance.ru | 123456 |
+| Модератор | moder@freelance.ru | 123456 |
+| Фрилансер | ivan@freelance.ru | 123456 |
+| Заказчик | company@freelance.ru | 123456 |
 
 ---
 
 ## Структура проекта
-backend/controllers/  # 15 контроллеров API
-backend/crawler/      # Веб-краулер
-frontend/src/pages/   # 15 страниц
-database/migrations/  # SQL миграции
+backend/controllers/ # 15 контроллеров API
+backend/crawler/ # Веб-краулер
+frontend/src/pages/ # 15 страниц
+database/migrations/ # SQL миграции
 
----
+text
 
 ## API
-POST /api/auth/register    # Регистрация
-POST /api/auth/login        # Вход (JWT)
-GET  /api/orders            # Список заказов
-POST /api/orders            # Создать заказ
-GET  /api/orders/search     # Поиск заказов
-POST /api/responses         # Откликнуться
-POST /api/responses/{id}/accept  # Принять отклик
-GET  /api/moderation/orders # Модерация
-POST /api/crawler/start     # Запуск краулера
-GET  /api/admin/stats       # Статистика
-GET  /api/admin/export/csv  # CSV экспорт
-
----
+| Метод | Путь | Описание |
+|-------|------|----------|
+| POST | /api/auth/register | Регистрация |
+| POST | /api/auth/login | Вход (JWT) |
+| GET | /api/orders | Список заказов |
+| POST | /api/orders | Создать заказ |
+| GET | /api/orders/search | Поиск заказов |
+| POST | /api/responses | Откликнуться |
+| POST | /api/responses/{id}/accept | Принять отклик |
+| GET | /api/moderation/orders | Модерация |
+| POST | /api/crawler/start | Запуск краулера |
+| GET | /api/admin/stats | Статистика |
+| GET | /api/admin/export/csv | CSV экспорт |
 
 ## Функционал
 - 4 роли: фрилансер, заказчик, модератор, админ
