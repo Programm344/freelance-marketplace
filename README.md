@@ -7,6 +7,7 @@
 
 git clone https://github.com/Programm344/freelance-marketplace.git
 cd freelance-marketplace
+
 make all
 
 Открыть http://localhost:3000
@@ -14,10 +15,15 @@ make all
 
 ## Пошаговый запуск
 
+
 make install   # Установить зависимости (один раз)
+
 make db        # Создать базу данных (один раз)
+
 make build     # Собрать бэкенд
+
 make run       # Запустить
+
 
 
 ## Аккаунты
