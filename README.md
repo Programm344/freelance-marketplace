@@ -2,42 +2,23 @@
 
 Маркетплейс фрилансеров с веб-краулером. Стек: C++ Drogon + React + PostgreSQL.
 
----
 
-## Запуск (WSL / Ubuntu 22.04+)
+## Быстрый запуск
 
-### 1. Клонировать репозиторий
 git clone https://github.com/Programm344/freelance-marketplace.git
 cd freelance-marketplace
+make all
 
-### 2. Установить PostgreSQL
-sudo apt update
-sudo apt install -y postgresql postgresql-client
-sudo service postgresql start
+Открыть http://localhost:3000
 
-### 3. Создать базу данных
-sudo -u postgres psql -c "CREATE USER freelancer WITH PASSWORD 'freelancer_pass';"
-sudo -u postgres psql -c "CREATE DATABASE freelance_marketplace OWNER freelancer;"
-sudo -u postgres psql -d freelance_marketplace -c "GRANT ALL ON SCHEMA public TO freelancer;"
-PGPASSWORD=freelancer_pass psql -h 127.0.0.1 -U freelancer -d freelance_marketplace -f database/migrations/001_initial_schema.sql
-PGPASSWORD=freelancer_pass psql -h 127.0.0.1 -U freelancer -d freelance_marketplace -f database/migrations/002_seed_data.sql
 
-### 4. Собрать и запустить бэкенд (терминал 1)
-cd backend
-mkdir -p build && cd build
-cmake .. && make -j$(nproc)
-cd ..
-./build/freelance_backend
+## Пошаговый запуск
 
-### 5. Запустить фронтенд (терминал 2)
-cd frontend
-npm install
-npm start
+make install   # Установить зависимости (один раз)
+make db        # Создать базу данных (один раз)
+make build     # Собрать бэкенд
+make run       # Запустить
 
-### 6. Открыть
-http://localhost:3000
-
----
 
 ## Аккаунты
 
@@ -46,21 +27,18 @@ http://localhost:3000
 Фрилансер: ivan@freelance.ru   / 123456
 Заказчик:  company@freelance.ru / 123456
 
----
 
 ## Проверка функционала
 
-1. Регистрация — http://localhost:3000/register
-2. Профиль — войти как ivan@freelance.ru
-3. Создать заказ — войти как company@freelance.ru
-4. Модерация — войти как moder@freelance.ru
-5. Отклик — фрилансер ищет заказ и откликается
-6. Чат — заказчик принимает отклик
-7. Отзывы — завершить заказ, оставить оценку
-8. Краулер — админ запускает сбор заказов
-9. Статистика и CSV — админ смотрит сводку
+1. Регистрация
+2. Профиль фрилансера (ivan@freelance.ru)
+3. Создать заказ (company@freelance.ru)
+4. Модерация (moder@freelance.ru)
+5. Отклик и чат
+6. Отзывы
+7. Краулер (admin@freelance.ru)
+8. Статистика и CSV
 
----
 
 ## API
 
@@ -76,6 +54,8 @@ POST /api/crawler/start         — Краулер
 GET  /api/admin/stats           — Статистика
 GET  /api/admin/export/csv      — CSV
 
+
 ## Функционал
+
 4 роли, 9 статусов заказов, отклики, чат, отзывы, модерация,
 краулер, уведомления, CSV-экспорт, JWT, защита от SQL-инъекций
