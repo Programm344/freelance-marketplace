@@ -18,8 +18,7 @@ class WebCrawler {
 public:
     WebCrawler();
     ~WebCrawler();
-    
     std::vector<CrawlResult> crawlSource(const Json::Value& sourceConfig);
-    void saveResults(const drogon::orm::DbClientPtr& db, 
-                     const std::vector<CrawlResult>& results);
+    void saveResults(const drogon::orm::DbClientPtr& db, const std::vector<CrawlResult>& results);
+    void notifyMatchingSearches(const drogon::orm::DbClientPtr& db, const std::vector<CrawlResult>& results);
 };

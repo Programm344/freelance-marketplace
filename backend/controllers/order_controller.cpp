@@ -244,7 +244,7 @@ void OrderController::search(const HttpRequestPtr &req,
             "WHERE o.status NOT IN ('draft', 'on_moderation')";
         
         if (!keyword.empty())
-            query += " AND (o.title ILIKE $1 OR o.description ILIKE $1)";
+            query += " AND (o.title ILIKE $1 OR o.description ILIKE $1 OR o.required_skills::text ILIKE $1)";
         if (!budgetMin.empty())
             query += " AND o.budget >= " + budgetMin;  // числа безопасны после проверки
         if (!budgetMax.empty())

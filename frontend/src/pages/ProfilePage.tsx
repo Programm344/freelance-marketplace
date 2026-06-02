@@ -10,7 +10,6 @@ const ProfilePage: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [requestForm, setRequestForm] = useState({ company_name: '', description: '', contact: '' });
   const userId = localStorage.getItem('user_id') || '1';
-  const currentRole = localStorage.getItem('role') || '';
   const [form, setForm] = useState({ display_name: '', specialization: '', experience: '', skills: '', hourly_rate: 0, is_available: true, company_name: '', description: '' });
 
   useEffect(() => { fetchProfile(); }, []);
@@ -26,12 +25,29 @@ const ProfilePage: React.FC = () => {
 
   const handleSave = async () => { setSaving(true); try { await api.put(`/api/user/profile?user_id=${userId}`, form); setMessage('Профиль обновлён!'); fetchProfile(); } catch (err: any) { setMessage('Ошибка'); } setSaving(false); };
 
-  const sendRequest = async (newRole: string, extra: any = {}) => {
+  const changeRole = async (newRole: string) => {
     try {
-      const res = await api.post('/api/role/request', { user_id: Number(userId), role: newRole, ...extra });
-      if (newRole !== 'customer') { localStorage.setItem('role', newRole); setMessage(`Роль изменена на "${newRole}"!`); fetchProfile(); }
-      else { setMessage('Заявка отправлена модератору!'); setDialogOpen(false); }
-    } catch (err: any) { setMessage(err.response?.data?.error || 'Ошибка'); }
+      const res = await api.post('/api/role/request', { user_id: Number(userId), role: newRole });
+      if (res.data.status === 'success') {
+        localStorage.setItem('role', newRole);
+        setMessage(`Роль изменена на "${newRole}"!`);
+        fetchProfile();
+      }
+    } catch (err: any) {
+      // Если уже был заказчиком — бэкенд вернёт success
+      if (err.response?.data?.error) setMessage(err.response.data.error);
+      else setMessage('Ошибка');
+    }
+  };
+
+  const becomeCustomer = () => {
+    // Если профиль заказчика уже заполнен — меняем сразу
+    if (profile.company_name) {
+      changeRole('customer');
+      return;
+    }
+    // Иначе показываем форму
+    setDialogOpen(true);
   };
 
   if (loading) return <Typography>Загрузка...</Typography>;
@@ -44,13 +60,12 @@ const ProfilePage: React.FC = () => {
 
       <Card sx={{ mb: 3 }}>
         <CardContent>
-          <Typography variant="h6" gutterBottom>Роль: {profile.role==='freelancer'?'Фрилансер':profile.role==='customer'?'Заказчик':profile.role==='admin'?'Админ':profile.role}</Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {profile.role !== 'customer' && <Button variant="outlined" onClick={() => setDialogOpen(true)}>Стать заказчиком (заявка)</Button>}
-            {profile.role !== 'freelancer' && <Button variant="outlined" onClick={() => sendRequest('freelancer')}>Стать фрилансером</Button>}
-            {/* Кнопка возврата к админу — только если был админом */}
-            {profile.role !== 'admin' && currentRole === 'admin' && (
-              <Button variant="outlined" color="error" onClick={() => sendRequest('admin')}>Вернуться к админу</Button>
+          <Typography variant="h6" gutterBottom>Роль: {profile.role==='freelancer'?'Фрилансер':profile.role==='customer'?'Заказчик':profile.role}</Typography>
+          <Stack direction="row" spacing={1}>
+            {profile.role !== 'customer' && <Button variant="outlined" onClick={becomeCustomer}>Стать заказчиком</Button>}
+            {profile.role !== 'freelancer' && <Button variant="outlined" onClick={()=>changeRole('freelancer')}>Стать фрилансером</Button>}
+            {profile.role !== 'admin' && localStorage.getItem('role') === 'admin' && (
+              <Button variant="outlined" color="error" onClick={()=>changeRole('admin')}>Вернуться к админу</Button>
             )}
           </Stack>
         </CardContent>
@@ -61,9 +76,9 @@ const ProfilePage: React.FC = () => {
           <Card><CardContent>
             <Typography variant="h6" gutterBottom>Редактирование</Typography>
             {isFreelancer ? (<>
-              <TextField fullWidth label="Имя" value={form.display_name} onChange={e=>setForm({...form,display_name:e.target.value})} margin="normal" />
-              <TextField fullWidth label="Специализация" value={form.specialization} onChange={e=>setForm({...form,specialization:e.target.value})} margin="normal" />
-              <TextField fullWidth label="Опыт" value={form.experience} onChange={e=>setForm({...form,experience:e.target.value})} margin="normal" multiline rows={3} />
+              <TextField fullWidth label="Имя *" value={form.display_name} onChange={e=>setForm({...form,display_name:e.target.value})} margin="normal" required />
+              <TextField fullWidth label="Специализация *" value={form.specialization} onChange={e=>setForm({...form,specialization:e.target.value})} margin="normal" required />
+              <TextField fullWidth label="Опыт *" value={form.experience} onChange={e=>setForm({...form,experience:e.target.value})} margin="normal" multiline rows={3} required />
               <TextField fullWidth label="Навыки" value={form.skills} onChange={e=>setForm({...form,skills:e.target.value})} margin="normal" />
               <TextField fullWidth label="Ставка (₽/час)" type="number" value={form.hourly_rate} onChange={e=>setForm({...form,hourly_rate:Number(e.target.value)})} margin="normal" />
               <FormControlLabel control={<Switch checked={form.is_available} onChange={e=>setForm({...form,is_available:e.target.checked})} />} label="Доступен" sx={{mt:2}} />
@@ -71,7 +86,7 @@ const ProfilePage: React.FC = () => {
               <TextField fullWidth label="Компания" value={form.company_name} onChange={e=>setForm({...form,company_name:e.target.value})} margin="normal" />
               <TextField fullWidth label="Описание" value={form.description} onChange={e=>setForm({...form,description:e.target.value})} margin="normal" multiline rows={4} />
             </>)}
-            <Button variant="contained" onClick={handleSave} disabled={saving} sx={{mt:3}}>Сохранить</Button>
+            <Button variant="contained" onClick={handleSave} disabled={saving || (isFreelancer && (!form.display_name || !form.specialization || !form.experience))} sx={{mt:3}}>Сохранить</Button>
           </CardContent></Card>
         </Grid>
         <Grid item xs={12} md={4}>
@@ -87,14 +102,14 @@ const ProfilePage: React.FC = () => {
       <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Заявка на роль "Заказчик"</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Заполните данные компании. Заявка будет рассмотрена модератором.</Typography>
-          <TextField fullWidth label="Название компании" value={requestForm.company_name} onChange={e => setRequestForm({...requestForm, company_name: e.target.value})} margin="normal" required />
-          <TextField fullWidth label="Описание деятельности" value={requestForm.description} onChange={e => setRequestForm({...requestForm, description: e.target.value})} margin="normal" multiline rows={3} required />
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Заполните данные компании. После одобрения модератором вы сможете переключаться без заявки.</Typography>
+          <TextField fullWidth label="Название компании *" value={requestForm.company_name} onChange={e => setRequestForm({...requestForm, company_name: e.target.value})} margin="normal" required />
+          <TextField fullWidth label="Описание деятельности *" value={requestForm.description} onChange={e => setRequestForm({...requestForm, description: e.target.value})} margin="normal" multiline rows={3} required />
           <TextField fullWidth label="Контакты" value={requestForm.contact} onChange={e => setRequestForm({...requestForm, contact: e.target.value})} margin="normal" />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDialogOpen(false)}>Отмена</Button>
-          <Button variant="contained" onClick={() => sendRequest('customer', requestForm)} disabled={!requestForm.company_name || !requestForm.description}>Отправить заявку</Button>
+          <Button variant="contained" onClick={() => { changeRole('customer'); setDialogOpen(false); }} disabled={!requestForm.company_name || !requestForm.description}>Отправить заявку</Button>
         </DialogActions>
       </Dialog>
     </Box>

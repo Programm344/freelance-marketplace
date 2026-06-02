@@ -38,6 +38,18 @@ void RoleController::request_role(const HttpRequestPtr &req,
             callback(httpResp); return;
         }
         
+        // Если уже был заказчиком и профиль заполнен — меняем сразу
+        if (requestedRole == "customer") {
+            auto profile = db->execSqlSync("SELECT company_name FROM customer_profiles WHERE user_id = $1", userId);
+            if (profile.size() > 0 && !profile[0]["company_name"].isNull() && !profile[0]["company_name"].as<std::string>().empty()) {
+                db->execSqlSync("UPDATE users SET role='customer' WHERE id=$1", userId);
+                Json::Value resp; resp["status"] = "success";
+                resp["message"] = "Роль изменена на customer (профиль уже заполнен)";
+                auto httpResp = HttpResponse::newHttpJsonResponse(resp);
+                callback(httpResp); return;
+            }
+        }
+        
         // Для заказчика — заявка с формой
         // Проверяем что нет активной заявки
         auto existing = db->execSqlSync(

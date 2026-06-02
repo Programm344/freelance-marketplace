@@ -16,6 +16,8 @@ import FreelancerProfilePage from "./pages/FreelancerProfilePage";
 import ReportsPage from "./pages/ReportsPage";
 import MyOrdersPage from "./pages/MyOrdersPage";
 import AdminPage from "./pages/AdminPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import SavedSearchesPage from "./pages/SavedSearchesPage";
 import CrawlerPage from './pages/CrawlerPage';
 
 const theme = createTheme({
@@ -86,6 +88,8 @@ function App() {
             <Route path="/reports" element={<ReportsPage />} />
             <Route path="/my-orders" element={<MyOrdersPage />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
+            <Route path="/saved-searches" element={<SavedSearchesPage />} />
             <Route path="/crawler" element={<CrawlerPage />} />
           </Route>
         </Routes>

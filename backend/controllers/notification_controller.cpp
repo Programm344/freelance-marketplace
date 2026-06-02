@@ -1,3 +1,4 @@
+#include "../utils/request_helper.h"
 #include "notification_controller.h"
 #include <drogon/HttpResponse.h>
 #include <drogon/orm/DbClient.h>
@@ -10,7 +11,7 @@ void NotificationController::get_my(const HttpRequestPtr &req,
         auto dbClient = app().getDbClient("default");
         
         auto result = dbClient->execSqlSync(
-            "SELECT * FROM notifications WHERE user_id = 1 ORDER BY created_at DESC LIMIT 50"
+            "SELECT * FROM notifications WHERE user_id = getUserIdFromRequest(req) ORDER BY created_at DESC LIMIT 50"
         );
         
         Json::Value notifications(Json::arrayValue);
@@ -67,7 +68,7 @@ void NotificationController::mark_all_read(const HttpRequestPtr &req,
                                            std::function<void(const HttpResponsePtr &)> &&callback) {
     try {
         auto dbClient = app().getDbClient("default");
-        dbClient->execSqlSync("UPDATE notifications SET is_read = true WHERE user_id = 1");
+        dbClient->execSqlSync("UPDATE notifications SET is_read = true WHERE user_id = getUserIdFromRequest(req)");
         
         Json::Value response;
         response["status"] = "success";

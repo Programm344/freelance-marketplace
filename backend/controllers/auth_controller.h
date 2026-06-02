@@ -1,6 +1,5 @@
 #pragma once
 #include <drogon/HttpController.h>
-#include "../services/auth_service.h"
 
 class AuthController : public drogon::HttpController<AuthController> {
 public:
@@ -16,7 +15,4 @@ public:
               std::function<void(const drogon::HttpResponsePtr &)> &&callback);
     void test(const drogon::HttpRequestPtr &req,
              std::function<void(const drogon::HttpResponsePtr &)> &&callback);
-    
-private:
-    AuthService authService_;
 };

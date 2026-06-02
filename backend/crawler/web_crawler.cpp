@@ -120,7 +120,48 @@ std::vector<CrawlResult> WebCrawler::crawlSource(const Json::Value& sourceConfig
     return results;
 }
 
-void WebCrawler::saveResults(const orm::DbClientPtr& db, const std::vector<CrawlResult>& results) {
+
+void WebCrawler::notifyMatchingSearches(const orm::DbClientPtr& db, const std::vector<CrawlResult>& results) {
+    if (results.empty()) return;
+    
+    auto users = db->execSqlSync("SELECT DISTINCT user_id FROM saved_searches");
+    
+    for (const auto& user : users) {
+        int userId = user["user_id"].as<int>();
+        auto searches = db->execSqlSync("SELECT * FROM saved_searches WHERE user_id = $1", userId);
+        
+        for (const auto& r : results) {
+            for (const auto& s : searches) {
+                std::string keywords = s["keywords"].as<std::string>();
+                double budgetMin = s["budget_min"].isNull() ? 0 : s["budget_min"].as<double>();
+                double budgetMax = s["budget_max"].isNull() ? 999999999 : s["budget_max"].as<double>();
+                
+                bool budgetMatch = (r.budget == 0) || (r.budget >= budgetMin && r.budget <= budgetMax);
+                bool keywordMatch = keywords.empty() || 
+                    r.title.find(keywords) != std::string::npos ||
+                    r.description.find(keywords) != std::string::npos;
+                
+                if (budgetMatch && keywordMatch) {
+                    db->execSqlSync(
+                        "INSERT INTO notifications (user_id, type, title, message) "
+                        "VALUES ($1, 'matching_order', 'Подходящий внешний заказ', "
+                        "'По поиску \"' || $2 || '\" найден: ' || $3)",
+                        userId, s["name"].as<std::string>(), r.title
+                    );
+                    break; // одно уведомление на заказ
+                }
+            }
+        }
+    }
+    LOG_INFO << "Notifications sent for matching searches";
+}
+
+
+
+
+
+void WebCrawler::saveResults
+(const orm::DbClientPtr& db, const std::vector<CrawlResult>& results) {
     for (const auto& result : results) {
         // Проверка уже сделана в crawlSource
         

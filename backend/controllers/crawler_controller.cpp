@@ -27,6 +27,7 @@ void CrawlerController::start_crawl(const HttpRequestPtr &req,
             try {
                 auto results = crawler_.crawlSource(sourceConfig);
                 crawler_.saveResults(dbClient, results);
+                crawler_.notifyMatchingSearches(dbClient, results);
                 // Считаем реальное количество после очистки
                 auto cnt = dbClient->execSqlSync("SELECT COUNT(*) as c FROM external_orders WHERE source_name = $1 AND status = 'new'", source["name"].as<std::string>());
                 int realFound = cnt[0]["c"].as<int>();

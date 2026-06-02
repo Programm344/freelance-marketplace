@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Box, Typography, Card, CardContent, Grid, Chip, Button, Stack, TextField, InputAdornment, MenuItem } from '@mui/material';
+import { Box, Typography, Card, CardContent, Grid, Chip, Button, Stack, TextField, InputAdornment, MenuItem, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
 import { Link } from 'react-router-dom';
-import { Search as SearchIcon } from '@mui/icons-material';
+import { Search as SearchIcon, Save as SaveIcon } from '@mui/icons-material';
 import api from '../services/api';
 
 const OrdersPage: React.FC = () => {
@@ -12,6 +12,8 @@ const OrdersPage: React.FC = () => {
   const [budgetMin, setBudgetMin] = useState('');
   const [budgetMax, setBudgetMax] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [searchName, setSearchName] = useState('');
   const role = localStorage.getItem('role') || '';
 
   useEffect(() => { doSearch(); fetchExternalOrders(); }, []);
@@ -19,10 +21,8 @@ const OrdersPage: React.FC = () => {
   const doSearch = async () => {
     const params = new URLSearchParams();
     if (keyword) params.append('keyword', keyword);
-    const bmin = parseInt(budgetMin);
-    const bmax = parseInt(budgetMax);
-    if (!isNaN(bmin) && bmin > 0) params.append('budget_min', String(bmin));
-    if (!isNaN(bmax) && bmax > 0) params.append('budget_max', String(bmax));
+    if (budgetMin && parseInt(budgetMin) > 0) params.append('budget_min', budgetMin);
+    if (budgetMax && parseInt(budgetMax) > 0) params.append('budget_max', budgetMax);
     if (statusFilter) params.append('status', statusFilter);
     const res = await api.get(`/api/orders/search?${params.toString()}`);
     setOrders(res.data.orders || []);
@@ -31,6 +31,21 @@ const OrdersPage: React.FC = () => {
   const fetchExternalOrders = async () => {
     const res = await api.get('/api/crawler/orders');
     setExternalOrders(res.data.orders || []);
+  };
+
+  const saveSearch = async () => {
+    try {
+      await api.post('/api/searches', {
+        name: searchName,
+        keywords: keyword,
+        skills: keyword,
+        budget_min: parseInt(budgetMin) || 0,
+        budget_max: parseInt(budgetMax) || 0
+      });
+      setSaveDialogOpen(false);
+      setSearchName('');
+      alert('Поиск сохранён!');
+    } catch (err) { alert('Ошибка сохранения'); }
   };
 
   const getStatusLabel = (s: string) => {
@@ -64,6 +79,7 @@ const OrdersPage: React.FC = () => {
               <MenuItem value="completed">Завершён</MenuItem>
             </TextField>
             <Button variant="contained" onClick={doSearch}>Найти</Button>
+            <Button variant="outlined" startIcon={<SaveIcon />} onClick={() => setSaveDialogOpen(true)} title="Сохранить параметры поиска">Сохранить</Button>
             <Button variant="outlined" onClick={()=>{setKeyword('');setBudgetMin('');setBudgetMax('');setStatusFilter('');}}>Сбросить</Button>
           </Stack>
         </Card>
@@ -83,11 +99,9 @@ const OrdersPage: React.FC = () => {
                     {order.source_name && <Chip label={order.source_name} size="small" variant="outlined" sx={{ mt:1 }} />}
                   </Box>
                   <Box sx={{ textAlign:'right', ml: 2, minWidth: 120 }}>
-                    <Chip label={getStatusLabel(order.status)} size="small" 
-                      color={order.status==='published'||order.status==='new'?'success':order.status==='in_progress'?'info':'default'} sx={{ mb:1 }} />
+                    <Chip label={getStatusLabel(order.status)} size="small" color={order.status==='published'?'success':'default'} sx={{ mb:1 }} />
                     {order.budget > 0 && <Typography variant="h6" color="primary">{Number(order.budget).toLocaleString()} ₽</Typography>}
                     <Typography variant="caption" display="block">{order.category||''}</Typography>
-                    <Typography variant="caption" display="block" color="text.secondary">{order.customer_email?.substring(0,25)}</Typography>
                   </Box>
                 </Box>
               </CardContent>
@@ -95,6 +109,20 @@ const OrdersPage: React.FC = () => {
           </Grid>
         ))}
       </Grid>
+
+      <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)}>
+        <DialogTitle>Сохранить поиск</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            Ключевые слова: {keyword || 'нет'} | Бюджет: {budgetMin || '0'}–{budgetMax || 'любо'} ₽
+          </Typography>
+          <TextField fullWidth label="Название поиска" value={searchName} onChange={e => setSearchName(e.target.value)} margin="normal" required />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setSaveDialogOpen(false)}>Отмена</Button>
+          <Button variant="contained" onClick={saveSearch} disabled={!searchName}>Сохранить</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };

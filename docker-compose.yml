@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: freelancer
+      POSTGRES_PASSWORD: freelancer_pass
+      POSTGRES_DB: freelance_marketplace
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./database/migrations/001_initial_schema.sql:/docker-entrypoint-initdb.d/001_init.sql
+      - ./database/migrations/002_seed_data.sql:/docker-entrypoint-initdb.d/002_seed.sql
+    ports:
+      - "5432:5432"
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: freelance_marketplace
+      DB_USER: freelancer
+      DB_PASSWORD: freelancer_pass
+
+volumes:
+  pgdata:
