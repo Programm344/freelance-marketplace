@@ -23,12 +23,13 @@ build:
 
 run:
 	@echo "=== Запуск ==="
+	-killall freelance_backend 2>/dev/null
+	cd backend && ./build/freelance_backend &
+	@sleep 2
 	@echo "Бэкенд: http://localhost:8080"
 	@echo "Фронтенд: http://localhost:3000"
-	cd backend && ./build/freelance_backend &
-	sleep 1
 	cd frontend && npm start
 
 clean:
-	killall freelance_backend 2>/dev/null || true
+	-killall freelance_backend 2>/dev/null
 	rm -rf backend/build
