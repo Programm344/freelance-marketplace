@@ -3,7 +3,7 @@
     "db_clients": [{
         "name": "default",
         "rdbms": "postgresql",
-        "host": "db",
+        "host": "127.0.0.1",
         "port": 5432,
         "dbname": "freelance_marketplace",
         "user": "freelancer",
