@@ -47,17 +47,6 @@ npm start
 ---
 
 
-Открыть: http://localhost:3000
-
-### Шаг 6. Войти в систему
-| Роль | Логин | Пароль |
-|------|-------|--------|
-| Админ | admin@freelance.ru | 123456 |
-| Модератор | moder@freelance.ru | 123456 |
-| Фрилансер | ivan@freelance.ru | 123456 |
-| Заказчик | company@freelance.ru | 123456 |
-
----
 
 ## Быстрый запуск через Docker
 docker-compose up
