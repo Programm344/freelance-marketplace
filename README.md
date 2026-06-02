@@ -1,20 +1,20 @@
 # Freelance Marketplace
 
-Маркетплейс фрилансеров с веб-краулером. Стек: C++ Drogon + React + PostgreSQL.
+Маркетплейс фрилансеров с веб-краулером
+
+**Стек:** C++ Drogon + React TypeScript + PostgreSQL
 
 ---
 
 ## Быстрый запуск (Docker)
 
-### 1. Установить Docker
 ```bash
-sudo apt update && sudo apt install -y docker.io docker-compose
-2. Клонировать и запустить
 git clone https://github.com/Programm344/freelance-marketplace.git
 cd freelance-marketplace
 docker-compose up
-3. Открыть в браузере
-http://localhost:8080
+Открыть: http://localhost:8080
+
+Все включено: PostgreSQL, бэкенд, фронтенд, тестовые данные.
 Аккаунты для входа
 Роль	Логин	Пароль
 Админ	admin@freelance.ru	123456
@@ -22,37 +22,32 @@ http://localhost:8080
 Фрилансер	ivan@freelance.ru	123456
 Заказчик	company@freelance.ru	123456
 Как проверить функционал
-Регистрация — http://localhost:8080/register
-
-Профиль — войти как ivan@freelance.ru, заполнить навыки и ставку
-
-Создать заказ — войти как company@freelance.ru, создать заказ
-
-Модерация — войти как moder@freelance.ru, одобрить заказ
-
-Отклик — фрилансер ищет заказ и откликается
-
-Чат — заказчик принимает отклик, появляется чат
-
-Отзывы — завершить заказ, оставить оценку ★
-
-Краулер — админ запускает сбор заказов с бирж
-
-Статистика — админ/модератор смотрит сводку и CSV
+Шаг	Действие	Аккаунт
+1	Зарегистрироваться	Новый пользователь
+2	Заполнить профиль фрилансера	ivan@freelance.ru
+3	Создать заказ	company@freelance.ru
+4	Одобрить заказ (модерация)	moder@freelance.ru
+5	Найти заказ и откликнуться	ivan@freelance.ru
+6	Принять отклик	company@freelance.ru
+7	Чат между участниками	Оба аккаунта
+8	Завершить заказ и оставить отзыв	Оба аккаунта
+9	Запустить краулер	admin@freelance.ru
+10	Посмотреть статистику и CSV	admin@freelance.ru
 API
 Метод	Путь	Описание
 POST	/api/auth/register	Регистрация
 POST	/api/auth/login	Вход (JWT)
 GET	/api/orders	Список заказов
 POST	/api/orders	Создать заказ
-GET	/api/orders/search	Поиск
-POST	/api/responses	Отклик
+GET	/api/orders/search	Поиск заказов
+POST	/api/responses	Откликнуться
+POST	/api/responses/{id}/accept	Принять отклик
 GET	/api/moderation/orders	Модерация
-POST	/api/crawler/start	Краулер
+POST	/api/crawler/start	Запуск краулера
 GET	/api/admin/stats	Статистика
-GET	/api/admin/export/csv	CSV
+GET	/api/admin/export/csv	CSV экспорт
 Функционал
-4 роли: фрилансер, заказчик, модератор, админ
+4 роли с разграничением прав
 
 CRUD заказов с 9 статусами
 
@@ -61,6 +56,8 @@ CRUD заказов с 9 статусами
 Модерация заказов и заявок на роль
 
 Веб-краулер (Freelance.ru, Habr Freelance)
+
+Сохраненные поиски и уведомления
 
 Статистика и CSV-экспорт
 
