@@ -44,17 +44,6 @@ npm start
 | Фрилансер | ivan@freelance.ru | 123456 |
 | Заказчик | company@freelance.ru | 123456 |
 
----
-
-
-
-## Быстрый запуск через Docker
-docker-compose up
-Открыть: http://localhost:8080  
-Всё включено: PostgreSQL, бэкенд, фронтенд, тестовые данные.
-
----
-
 ## Структура проекта
 freelance_marketplace/
 ├── backend/controllers/ # 15 контроллеров API
