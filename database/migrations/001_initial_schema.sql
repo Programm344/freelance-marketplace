@@ -227,3 +227,14 @@ CREATE TABLE IF NOT EXISTS role_requests (
     description TEXT,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Заявки на смену роли
+CREATE TABLE IF NOT EXISTS role_requests (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id),
+    requested_role VARCHAR(50) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending',
+    company_name VARCHAR(255),
+    description TEXT,
+    created_at TIMESTAMP DEFAULT NOW()
+);
