@@ -20,3 +20,7 @@ INSERT INTO orders (customer_id, title, description, category_id, required_skill
 
 INSERT INTO crawler_sources (name, base_url, status) VALUES
 ('Habr Freelance', 'https://freelance.habr.com/tasks', 'active');
+
+INSERT INTO crawler_sources (name, base_url, status) VALUES
+('Habr Freelance', 'https://freelance.habr.com/tasks', 'active'),
+('Freelance.ru', 'https://freelance.ru/projects', 'active');
