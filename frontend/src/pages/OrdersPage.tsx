@@ -16,6 +16,14 @@ const OrdersPage: React.FC = () => {
   const [searchName, setSearchName] = useState('');
   const role = localStorage.getItem('role') || '';
 
+  useEffect(() => {
+    if (localStorage.getItem("token")) {
+      api.get("/api/responses/my").then(res => {
+        const ids = (res.data.responses||[]).map((r:any) => r.order_id);
+        setOrders(prev => prev.map(o => ({...o, my_response: ids.includes(o.id)})));
+      }).catch(()=>{});
+    }
+  }, [orders.length]);
   useEffect(() => { doSearch(); fetchExternalOrders(); }, []);
 
   const doSearch = async () => {
@@ -26,6 +34,7 @@ const OrdersPage: React.FC = () => {
     if (statusFilter) params.append('status', statusFilter);
     const res = await api.get(`/api/orders/search?${params.toString()}`);
     setOrders(res.data.orders || []);
+      try { const myRes = await api.get("/api/responses/my"); const myOrderIds = (myRes.data.responses||[]).map((r:any) => r.order_id); setOrders(ords => ords.map(o => ({...o, my_response: myOrderIds.includes(o.id)}))); } catch(e) {}
   };
 
   const fetchExternalOrders = async () => {
@@ -35,17 +44,10 @@ const OrdersPage: React.FC = () => {
 
   const saveSearch = async () => {
     try {
-      await api.post('/api/searches', {
-        name: searchName,
-        keywords: keyword,
-        skills: keyword,
-        budget_min: parseInt(budgetMin) || 0,
-        budget_max: parseInt(budgetMax) || 0
-      });
-      setSaveDialogOpen(false);
-      setSearchName('');
+      await api.post('/api/searches', { name: searchName, keywords: keyword, skills: keyword, budget_min: parseInt(budgetMin)||0, budget_max: parseInt(budgetMax)||0 });
+      setSaveDialogOpen(false); setSearchName('');
       alert('Поиск сохранён!');
-    } catch (err) { alert('Ошибка сохранения'); }
+    } catch (err) { alert('Ошибка'); }
   };
 
   const getStatusLabel = (s: string) => {
@@ -56,7 +58,6 @@ const OrdersPage: React.FC = () => {
   return (
     <Box>
       <Typography variant="h4" gutterBottom>Заказы</Typography>
-      
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
         <Button variant={tab==='internal'?'contained':'outlined'} onClick={()=>setTab('internal')}>Внутренние ({orders.length})</Button>
         <Button variant={tab==='external'?'contained':'outlined'} onClick={()=>setTab('external')}>Внешние ({externalOrders.length})</Button>
@@ -66,20 +67,15 @@ const OrdersPage: React.FC = () => {
       {tab === 'internal' && (
         <Card sx={{ mb: 2, p: 2 }}>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} flexWrap="wrap" useFlexGap>
-            <TextField size="small" placeholder="Поиск..." value={keyword} onChange={e=>setKeyword(e.target.value)}
-              onKeyPress={e=>e.key==='Enter'&&doSearch()}
-              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }}
-              sx={{ flex: 1, minWidth: 200 }} />
+            <TextField size="small" placeholder="Поиск..." value={keyword} onChange={e=>setKeyword(e.target.value)} onKeyPress={e=>e.key==='Enter'&&doSearch()}
+              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon /></InputAdornment> }} sx={{ flex: 1, minWidth: 200 }} />
             <TextField size="small" label="Бюджет от" type="number" value={budgetMin} onChange={e=>{const v=Number(e.target.value);if(v>=0||e.target.value==='')setBudgetMin(e.target.value)}} sx={{ width: 110 }} />
             <TextField size="small" label="до" type="number" value={budgetMax} onChange={e=>{const v=Number(e.target.value);if(v>=0||e.target.value==='')setBudgetMax(e.target.value)}} sx={{ width: 110 }} />
             <TextField size="small" select label="Статус" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)} sx={{ width: 160 }}>
-              <MenuItem value="">Все</MenuItem>
-              <MenuItem value="published">Опубликован</MenuItem>
-              <MenuItem value="in_progress">В работе</MenuItem>
-              <MenuItem value="completed">Завершён</MenuItem>
+              <MenuItem value="">Все</MenuItem><MenuItem value="published">Опубликован</MenuItem><MenuItem value="in_progress">В работе</MenuItem><MenuItem value="completed">Завершён</MenuItem>
             </TextField>
             <Button variant="contained" onClick={doSearch}>Найти</Button>
-            <Button variant="outlined" startIcon={<SaveIcon />} onClick={() => setSaveDialogOpen(true)} title="Сохранить параметры поиска">Сохранить</Button>
+            <Button variant="outlined" startIcon={<SaveIcon />} onClick={() => setSaveDialogOpen(true)}>Сохранить</Button>
             <Button variant="outlined" onClick={()=>{setKeyword('');setBudgetMin('');setBudgetMax('');setStatusFilter('');}}>Сбросить</Button>
           </Stack>
         </Card>
@@ -97,6 +93,14 @@ const OrdersPage: React.FC = () => {
                     <Typography variant="h6" color="text.primary">{order.title}</Typography>
                     <Typography variant="body2" color="text.secondary">{order.description?.substring(0,150)}...</Typography>
                     {order.source_name && <Chip label={order.source_name} size="small" variant="outlined" sx={{ mt:1 }} />}
+                    {order.my_response && <Chip label="Вы откликнулись" size="small" color="success" sx={{ mt: 0.5 }} />}
+                    {order.required_skills && (
+                      <Box sx={{ mt: 0.5, display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                        {String(order.required_skills).replace(/[{}"]/g, "").split(",").map((s: string) => s.trim()).filter(Boolean).map((skill: string) => (
+                          <Chip key={skill} label={skill} size="small" variant="outlined" sx={{ fontSize: "0.7rem" }} />
+                        ))}
+                      </Box>
+                    )}
                   </Box>
                   <Box sx={{ textAlign:'right', ml: 2, minWidth: 120 }}>
                     <Chip label={getStatusLabel(order.status)} size="small" color={order.status==='published'?'success':'default'} sx={{ mb:1 }} />
@@ -113,15 +117,10 @@ const OrdersPage: React.FC = () => {
       <Dialog open={saveDialogOpen} onClose={() => setSaveDialogOpen(false)}>
         <DialogTitle>Сохранить поиск</DialogTitle>
         <DialogContent>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-            Ключевые слова: {keyword || 'нет'} | Бюджет: {budgetMin || '0'}–{budgetMax || 'любо'} ₽
-          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Ключевые слова: {keyword || 'нет'} | Бюджет: {budgetMin || '0'}–{budgetMax || 'любо'} ₽</Typography>
           <TextField fullWidth label="Название поиска" value={searchName} onChange={e => setSearchName(e.target.value)} margin="normal" required />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setSaveDialogOpen(false)}>Отмена</Button>
-          <Button variant="contained" onClick={saveSearch} disabled={!searchName}>Сохранить</Button>
-        </DialogActions>
+        <DialogActions><Button onClick={() => setSaveDialogOpen(false)}>Отмена</Button><Button variant="contained" onClick={saveSearch} disabled={!searchName}>Сохранить</Button></DialogActions>
       </Dialog>
     </Box>
   );

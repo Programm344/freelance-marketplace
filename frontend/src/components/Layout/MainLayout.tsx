@@ -16,17 +16,16 @@ const MainLayout: React.FC = () => {
   useEffect(() => {
     if (isLoggedIn) {
       api.get('/api/notifications').then(res => {
-        const notifs = res.data.notifications || [];
-        setUnreadCount(notifs.filter((n: any) => !n.is_read).length);
-      }).catch(() => {});
+        setUnreadCount((res.data.notifications||[]).filter((n:any)=>!n.is_read).length);
+      }).catch(()=>{});
     }
   }, []);
 
   const handleLogout = () => { localStorage.clear(); navigate('/login'); };
 
   const menuItems = [
-    { text: "Все заказы", icon: <Work />, path: "/orders" },
-    ...(userRole === "customer" ? [{ text: "Мои заказы", icon: <Work />, path: "/my-orders" }] : []),
+    { text: 'Заказы', icon: <Work />, path: '/orders' },
+    ...(userRole === 'customer' ? [{ text: 'Мои заказы', icon: <Work />, path: '/my-orders' }] : []),
     { text: 'Фрилансеры', icon: <Search />, path: '/freelancers' },
     ...(isLoggedIn ? [
       { text: 'Уведомления', icon: <Badge badgeContent={unreadCount} color="error"><NotificationsIcon /></Badge>, path: '/notifications' },
@@ -51,17 +50,12 @@ const MainLayout: React.FC = () => {
           <Typography variant="h6" component={Link} to="/" sx={{ flexGrow: 1, textDecoration: 'none', color: 'primary.main', fontWeight: 700 }}>FreelanceMarket</Typography>
           <Box sx={{ display: { xs: 'none', md: 'flex' }, gap: 1 }}>
             {menuItems.map(item => (
-              <Button key={item.text} component={Link} to={item.path} color="inherit" size="small" sx={{ minWidth: 'auto' }}>
-                {item.icon}
-                <Box component="span" sx={{ ml: 0.5, display: { xs: 'none', lg: 'inline' } }}>{item.text}</Box>
-              </Button>
+              <Button key={item.text} component={Link} to={item.path} color="inherit" size="small">{item.icon}<Box component="span" sx={{ ml: 0.5, display: { xs: 'none', lg: 'inline' } }}>{item.text}</Box></Button>
             ))}
           </Box>
           {isLoggedIn ? (
             <>
-              <IconButton onClick={(e) => setAnchorEl(e.currentTarget)}>
-                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 14 }}>{userEmail?.[0]?.toUpperCase() || 'U'}</Avatar>
-              </IconButton>
+              <IconButton onClick={(e) => setAnchorEl(e.currentTarget)}><Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: 14 }}>{userEmail?.[0]?.toUpperCase() || 'U'}</Avatar></IconButton>
               <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={() => setAnchorEl(null)}>
                 <MenuItem disabled><Typography variant="caption">{userEmail}</Typography></MenuItem>
                 <MenuItem disabled><Typography variant="caption">Роль: {userRole}</Typography></MenuItem>
@@ -77,18 +71,7 @@ const MainLayout: React.FC = () => {
           )}
         </Toolbar>
       </AppBar>
-      <Drawer open={mobileOpen} onClose={() => setMobileOpen(false)}>
-        <Toolbar />
-        <List>{menuItems.map(item => (
-          <ListItem key={item.text} component={Link} to={item.path} onClick={() => setMobileOpen(false)}>
-            <ListItemIcon>{item.icon}</ListItemIcon>
-            <ListItemText primary={item.text} />
-          </ListItem>
-        ))}</List>
-      </Drawer>
-      <Box component="main" sx={{ flexGrow: 1, pt: 8, pb: 4 }}>
-        <Container maxWidth="lg"><Outlet /></Container>
-      </Box>
+      <Box component="main" sx={{ flexGrow: 1, pt: 8, pb: 4 }}><Container maxWidth="lg"><Outlet /></Container></Box>
     </Box>
   );
 };

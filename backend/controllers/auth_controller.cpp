@@ -30,10 +30,18 @@ void AuthController::register_user(const HttpRequestPtr &req,
         resp->setStatusCode(k400BadRequest); callback(resp); return;
     }
     
+    std::string role = (*json).isMember("role") ? (*json)["role"].asString() : "freelancer";
+    std::string originalRole = role;
+    LOG_INFO << "Register role from request: " << role;
     std::string email = (*json)["email"].asString();
     std::string password = (*json)["password"].asString();
-    if (email.empty() || password.empty()) {
-        auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Email and password required"}});
+    
+    if (email.empty() || email.find("@") == std::string::npos || email.find(".") == std::string::npos) {
+        auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Введите корректный email"}});
+        resp->setStatusCode(k400BadRequest); callback(resp); return;
+    }
+    if (password.length() < 3) {
+        auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Пароль не менее 3 символов"}});
         resp->setStatusCode(k400BadRequest); callback(resp); return;
     }
     
@@ -41,19 +49,22 @@ void AuthController::register_user(const HttpRequestPtr &req,
         auto db = app().getDbClient("default");
         auto existing = db->execSqlSync("SELECT id FROM users WHERE email = $1", email);
         if (existing.size() > 0) {
-            auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Email already exists"}});
+            auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Пользователь уже существует"}});
             resp->setStatusCode(k400BadRequest); callback(resp); return;
         }
         
         std::string hashed = hashPassword(password);
+        std::string role = "freelancer";
         auto result = db->execSqlSync(
             "INSERT INTO users (email, password_hash, role) VALUES ($1, $2, 'freelancer') RETURNING id, email, role",
             email, hashed
         );
         
         int userId = result[0]["id"].as<int>();
-        std::string role = result[0]["role"].as<std::string>();
         db->execSqlSync("INSERT INTO freelancer_profiles (user_id) VALUES ($1)", userId);
+        if (originalRole == "customer") { db->execSqlSync("UPDATE users SET role='customer' WHERE id=$1", userId); db->execSqlSync("INSERT INTO customer_profiles (user_id) VALUES ($1)", userId); }
+        if (originalRole == "customer") { db->execSqlSync("INSERT INTO customer_profiles (user_id) VALUES ($1)", userId); } else { db->execSqlSync("INSERT INTO freelancer_profiles (user_id) VALUES ($1)", userId); }
+        if (originalRole == "customer") { db->execSqlSync("UPDATE users SET role='customer' WHERE id=$1", userId); db->execSqlSync("INSERT INTO customer_profiles (user_id) VALUES ($1)", userId); }
         
         std::string token = JwtHelper::generateToken(userId, role, email);
         
@@ -66,7 +77,8 @@ void AuthController::register_user(const HttpRequestPtr &req,
         auto httpResp = HttpResponse::newHttpJsonResponse(resp);
         httpResp->setStatusCode(k201Created); callback(httpResp);
     } catch (const std::exception& e) {
-        auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", e.what()}});
+        Json::Value err; err["error"] = std::string("Ошибка: ") + e.what();
+        auto resp = HttpResponse::newHttpJsonResponse(err);
         resp->setStatusCode(k500InternalServerError); callback(resp);
     }
 }
@@ -74,26 +86,26 @@ void AuthController::register_user(const HttpRequestPtr &req,
 void AuthController::login(const HttpRequestPtr &req,
                           std::function<void(const HttpResponsePtr &)> &&callback) {
     auto json = req->getJsonObject();
+    std::string role = (*json).isMember("role") ? (*json)["role"].asString() : "freelancer";
+    std::string originalRole = role;
+    LOG_INFO << "Register role from request: " << role;
     std::string email = (*json)["email"].asString();
     std::string password = (*json)["password"].asString();
     
     try {
         auto db = app().getDbClient("default");
-        auto result = db->execSqlSync(
-            "SELECT id, email, password_hash, role, is_blocked FROM users WHERE email = $1", email
-        );
+        auto result = db->execSqlSync("SELECT id, email, password_hash, role, is_blocked FROM users WHERE email = $1", email);
         if (result.size() == 0) {
-            auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Invalid credentials"}});
+            auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Неверный email или пароль"}});
             resp->setStatusCode(k401Unauthorized); callback(resp); return;
         }
-        
         auto row = result[0];
         if (row["is_blocked"].as<bool>()) {
-            auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "User blocked"}});
+            auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Пользователь заблокирован"}});
             resp->setStatusCode(k403Forbidden); callback(resp); return;
         }
         if (hashPassword(password) != row["password_hash"].as<std::string>()) {
-            auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Invalid credentials"}});
+            auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", "Неверный email или пароль"}});
             resp->setStatusCode(k401Unauthorized); callback(resp); return;
         }
         
@@ -109,7 +121,8 @@ void AuthController::login(const HttpRequestPtr &req,
         resp["token"] = token;
         auto httpResp = HttpResponse::newHttpJsonResponse(resp); callback(httpResp);
     } catch (const std::exception& e) {
-        auto resp = HttpResponse::newHttpJsonResponse(Json::Value{{"error", e.what()}});
+        Json::Value err; err["error"] = e.what();
+        auto resp = HttpResponse::newHttpJsonResponse(err);
         resp->setStatusCode(k500InternalServerError); callback(resp);
     }
 }

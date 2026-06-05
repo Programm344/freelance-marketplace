@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { Box, Typography, Card, CardContent, Grid, Chip, Button, TextField, Stack, Alert, Dialog, DialogTitle, DialogContent, DialogActions, Rating } from '@mui/material';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 
 const OrderDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [order, setOrder] = useState<any>(null);
   const [responses, setResponses] = useState<any[]>([]);
   const [messages, setMessages] = useState<any[]>([]);
@@ -14,7 +15,7 @@ const OrderDetailPage: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [reviewDialogOpen, setReviewDialogOpen] = useState(false);
   const [sendingResponse, setSendingResponse] = useState(false);
-  const [reviewForm, setReviewForm] = useState({ target_id: 0, rating: 5, comment: '' });
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: '' });
   const [msg, setMsg] = useState('');
   const currentUserId = Number(localStorage.getItem('user_id') || '1');
   const currentRole = localStorage.getItem('role') || 'freelancer';
@@ -27,15 +28,29 @@ const OrderDetailPage: React.FC = () => {
   const fetchMessages = async () => { try { const res = await api.get(`/api/orders/${id}/messages`); setMessages(res.data.messages || []); } catch (err) { console.error(err); } };
   const fetchReviews = async () => { try { const res = await api.get(`/api/orders/${id}/reviews`); setReviews(res.data.reviews || []); } catch (err) {} };
 
-  const handleResponse = async () => { if (sendingResponse) return; setSendingResponse(true); try { await api.post('/api/responses', responseForm); setMsg('Отклик отправлен!'); setDialogOpen(false); fetchResponses(); } catch (err: any) { setMsg(err.response?.data?.error || 'Ошибка'); } setSendingResponse(false); };
+  const handleResponse = async () => { if (!localStorage.getItem("token")) { window.location.href = "/register?msg=Для отклика необходимо зарегистрироваться"; return; } if (sendingResponse) return; setSendingResponse(true); try { await api.post('/api/responses', responseForm); setMsg('Отклик отправлен!'); setDialogOpen(false); fetchResponses(); } catch (err: any) { setMsg(err.response?.data?.error || 'Ошибка'); } setSendingResponse(false); };
   const handleAccept = async (rid: number) => { try { await api.post(`/api/responses/${rid}/accept`); setMsg('Принят!'); fetchOrder(); fetchResponses(); } catch (err: any) { setMsg('Ошибка'); } };
   const handleReject = async (rid: number) => { try { await api.post(`/api/responses/${rid}/reject`); setMsg('Отклонён'); fetchResponses(); } catch (err: any) { setMsg('Ошибка'); } };
   const sendMessage = async () => { if (!newMessage.trim()) return; try { await api.post('/api/messages', { order_id: Number(id), message: newMessage }); setNewMessage(''); fetchMessages(); } catch (err) { console.error(err); } };
   const handleComplete = async () => { try { await api.put(`/api/orders/${id}`, { status: 'completed' }); setMsg('Завершён!'); fetchOrder(); fetchReviews(); } catch (err: any) { setMsg('Ошибка'); } };
   const handleSubmitToModeration = async () => { try { await api.post(`/api/orders/${id}/submit`); setMsg('Отправлено!'); fetchOrder(); } catch (err: any) { setMsg('Ошибка'); } };
-  const handleReview = async () => { if (!reviewForm.target_id) { setMsg('Выберите кому отзыв'); return; } try { await api.post('/api/reviews', { target_id: reviewForm.target_id, order_id: Number(id), rating: reviewForm.rating, comment: reviewForm.comment }); setMsg('Отзыв оставлен!'); setReviewDialogOpen(false); fetchReviews(); } catch (err: any) { setMsg(err.response?.data?.error || 'Ошибка'); } };
+  
+  const handleReview = async () => {
+    let targetId = 0;
+    if (currentRole === 'freelancer') {
+      targetId = order?.customer_id || 0;
+    } else {
+      const accepted = responses.find((r: any) => r.status === 'accepted');
+      targetId = accepted?.freelancer_id || 0;
+    }
+    if (!targetId) { setMsg('Нет получателя отзыва'); return; }
+    try {
+      await api.post('/api/reviews', { target_id: targetId, order_id: Number(id), rating: reviewForm.rating, comment: reviewForm.comment });
+      setMsg('Отзыв оставлен!'); setReviewDialogOpen(false); fetchReviews();
+    } catch (err: any) { setMsg(err.response?.data?.error || 'Ошибка'); }
+  };
 
-  const getStatusLabel = (s: string) => { const l: Record<string,string> = { draft:'Черновик', on_moderation:'На модерации', published:'Опубликован', in_progress:'В работе', completed:'Завершён', cancelled:'Отменён', rejected:'Отклонён' }; return l[s] || s; };
+  const getStatusLabel = (s: string) => { const l: Record<string,string> = { draft:'Черновик', on_moderation:'На модерации', published:'Опубликован', in_progress:'В работе', completed:'Завершён' }; return l[s] || s; };
 
   if (loading) return <Typography>Загрузка...</Typography>;
   if (!order) return <Typography>Заказ не найден</Typography>;
@@ -47,18 +62,30 @@ const OrderDetailPage: React.FC = () => {
 
       <Card sx={{ mb: 3 }}><CardContent>
         <Stack direction="row" justifyContent="space-between">
-          <Box><Typography variant="h4">{order.title}</Typography><Chip label={getStatusLabel(order.status)} size="small" color={order.status==='published'?'success':order.status==='in_progress'?'info':order.status==='completed'?'default':'warning'} sx={{ mt: 1 }} /></Box>
+          <Box><Typography variant="h4">{order.title}</Typography><Chip label={getStatusLabel(order.status)} size="small" color={order.status==='published'?'success':order.status==='in_progress'?'info':'default'} sx={{ mt: 1 }} /></Box>
           <Typography variant="h4" color="primary">{Number(order.budget||0).toLocaleString()} ₽</Typography>
         </Stack>
         <Typography sx={{ mt: 3 }}>{order.description}</Typography>
+        {order.required_skills && (
+          <Box sx={{ mt: 1, display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+            {String(order.required_skills).replace(/[{}"]/g,'').split(',').map((s: string) => s.trim()).filter(Boolean).map((skill: string) => (
+              <Chip key={skill} label={skill} size="small" variant="outlined" />
+            ))}
+          </Box>
+        )}
         <Stack direction="row" spacing={3} sx={{ mt: 3 }}><Typography><strong>Срок:</strong> {order.deadline||'Не указан'}</Typography><Typography><strong>Заказчик:</strong> {order.customer_email}</Typography></Stack>
         <Stack direction="row" spacing={1} sx={{ mt: 3 }}>
           {order.status==='draft' && currentRole==='customer' && order.customer_id===currentUserId && <Button variant="contained" color="warning" onClick={handleSubmitToModeration}>Отправить на модерацию</Button>}
-          {order.status==='published' && currentRole==='freelancer' && !alreadyResponded && <Button variant="contained" onClick={()=>setDialogOpen(true)}>Откликнуться</Button>}
+              {order.status==="published" && currentRole==="freelancer" && !alreadyResponded && localStorage.getItem("token") && (
+                <Button variant="contained" onClick={async () => {
+                  if (!localStorage.getItem("token")) { window.location.href = "/register?msg=Для отклика необходимо зарегистрироваться"; return; }
+                  try { const res = await api.get(`/api/user/profile?user_id=${currentUserId}`); if (!res.data.profile.display_name) { setMsg("Заполните профиль перед откликом"); navigate("/profile"); return; } } catch(e) {}
+                  setDialogOpen(true);
+                }}>Откликнуться</Button>
+              )}
           {order.status==='published' && currentRole==='freelancer' && alreadyResponded && <Chip label="Вы уже откликнулись" color="warning" />}
-          {order.status==='in_progress' && currentRole==='customer' && order.customer_id===currentUserId && <Button variant="contained" color="success" onClick={handleComplete}>Завершить заказ</Button>}
-          {order.status==='completed' && <Button variant="outlined" color="secondary" onClick={()=>{setReviewForm({target_id:0,rating:5,comment:''});setReviewDialogOpen(true);}}>Оставить отзыв</Button>}
-          {currentRole==='admin' && <Button variant="contained" color="error" onClick={async()=>{if(window.confirm('Удалить?')){await api.delete(`/api/orders/${order.id}`);window.location.href='/orders';}}}>Удалить</Button>}
+          {order.status==="in_progress" && localStorage.getItem("token") && currentRole==='customer' && order.customer_id===currentUserId && <Button variant="contained" color="success" onClick={handleComplete}>Завершить заказ</Button>}
+          {order.status==="completed" && localStorage.getItem("token") && (currentUserId === order.customer_id || responses.some((r:any) => r.freelancer_id === currentUserId && r.status === "accepted")) && <Button variant="outlined" color="secondary" onClick={()=>{setReviewForm({rating:5,comment:""});setReviewDialogOpen(true);}}>Оставить отзыв</Button>}
         </Stack>
       </CardContent></Card>
 
@@ -86,21 +113,16 @@ const OrderDetailPage: React.FC = () => {
       <Dialog open={dialogOpen} onClose={()=>setDialogOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Отклик</DialogTitle><DialogContent>
           <TextField fullWidth label="Сообщение" value={responseForm.message} onChange={e=>setResponseForm({...responseForm,message:e.target.value})} margin="normal" multiline rows={4} />
-          <TextField fullWidth label="Бюджет (₽)" type="number" value={responseForm.proposed_budget} onChange={e=>setResponseForm({...responseForm,proposed_budget:Number(e.target.value)})} margin="normal" />
+          <TextField fullWidth label="Бюджет (₽)" type="number" value={responseForm.proposed_budget||''} onChange={e=>setResponseForm({...responseForm,proposed_budget:Number(e.target.value)})} margin="normal" />
           <TextField fullWidth label="Срок" type="date" value={responseForm.proposed_deadline} onChange={e=>setResponseForm({...responseForm,proposed_deadline:e.target.value})} margin="normal" InputLabelProps={{shrink:true}} />
         </DialogContent><DialogActions><Button onClick={()=>setDialogOpen(false)}>Отмена</Button><Button variant="contained" onClick={handleResponse} disabled={sendingResponse}>Отправить</Button></DialogActions>
       </Dialog>
 
       <Dialog open={reviewDialogOpen} onClose={()=>setReviewDialogOpen(false)}>
         <DialogTitle>Оставить отзыв</DialogTitle><DialogContent>
-          <Typography gutterBottom>Кому:</Typography>
-          <Stack direction="row" spacing={1} sx={{mb:2}}>
-            <Button variant={reviewForm.target_id===order?.customer_id?"contained":"outlined"} size="small" onClick={()=>setReviewForm({...reviewForm,target_id:order?.customer_id||0})}>Заказчику ({order?.customer_email})</Button>
-            {responses.filter(r=>r.status==="accepted").map(r=><Button key={r.freelancer_id} variant={reviewForm.target_id===r.freelancer_id?"contained":"outlined"} size="small" onClick={()=>setReviewForm({...reviewForm,target_id:r.freelancer_id})}>Фрилансеру ({r.freelancer_email})</Button>)}
-          </Stack>
           <Rating value={reviewForm.rating} onChange={(_,v)=>setReviewForm({...reviewForm,rating:v||5})} size="large" />
           <TextField fullWidth label="Комментарий" value={reviewForm.comment} onChange={e=>setReviewForm({...reviewForm,comment:e.target.value})} margin="normal" multiline rows={3} />
-        </DialogContent><DialogActions><Button onClick={()=>setReviewDialogOpen(false)}>Отмена</Button><Button variant="contained" onClick={handleReview} disabled={!reviewForm.target_id}>Отправить</Button></DialogActions>
+        </DialogContent><DialogActions><Button onClick={()=>setReviewDialogOpen(false)}>Отмена</Button><Button variant="contained" onClick={handleReview}>Отправить</Button></DialogActions>
       </Dialog>
     </Box>
   );
